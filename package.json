@@ -1,0 +1,28 @@
+{
+  "name": "mycelium-poem",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A bilingual (English / Persian), three-dimensional WebGL poem grown as a mycelial network.",
+  "keywords": ["poetry", "webgl", "three.js", "persian", "generative"],
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node scripts/serve.mjs",
+    "serve": "node scripts/serve.mjs",
+    "test": "npm run build && playwright test",
+    "test:ui": "npm run build && playwright test --ui",
+    "test:update-snapshots": "npm run build && playwright test --update-snapshots",
+    "lint": "node scripts/static-check.mjs",
+    "check": "npm run lint && npm run test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "^24.19.2",
+    "axe-core": "4.14.0",
+    "typescript": "5.9.3"
+  }
+}

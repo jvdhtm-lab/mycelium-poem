@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#03080a">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Mycelium Poem — a bilingual, three-dimensional poem that grows in the dark. شعرِ میسلیوم، شبکه‌ای زنده از خطوط شعر.">
+<title>Mycelium Poem · شعرِ میسلیوم</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%2388f5d0'/%3E%3Cstop offset='.45' stop-color='%2339b99b' stop-opacity='.7'/%3E%3Cstop offset='1' stop-color='%2303080a' stop-opacity='0'/%3E%3C/radialGradient%3E%3Crect width='32' height='32' fill='%2303080a'/%3E%3Ccircle cx='16' cy='16' r='14' fill='url(%23g)'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Vazirmatn:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/*__STYLE__*/
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl" tabindex="0" role="application" aria-label="A slowly growing three-dimensional mycelium network. Each glowing node holds a line of poetry. Arrow keys orbit, plus and minus zoom, Enter travels to a selected line."></canvas>
+  <div id="line-layer" aria-hidden="true"></div>
+</div>
+
+<div id="ui">
+  <header id="brand">
+    <h1>Mycelium <span>Poem</span></h1>
+    <p class="brand-fa" lang="fa" dir="rtl">شعرِ میسلیوم</p>
+  </header>
+
+  <nav id="controls" aria-label="Controls · کنترل‌ها">
+    <div id="lang-toggle" data-testid="lang-toggle" role="group" aria-label="Language / زبان">
+      <button type="button" data-testid="lang-en" data-lang="en" aria-pressed="false" lang="en">EN</button>
+      <button type="button" data-testid="lang-fa" data-lang="fa" aria-pressed="false" lang="fa">فارسی</button>
+      <button type="button" data-testid="lang-both" data-lang="both" aria-pressed="true" lang="en">both</button>
+    </div>
+    <button type="button" id="sound-btn" data-testid="sound-btn" aria-pressed="false"><span class="en" id="sound-en">sound off</span><span class="slash" aria-hidden="true">/</span><span class="fa" id="sound-fa" lang="fa" dir="rtl">صدا خاموش</span></button>
+    <button type="button" id="share-btn" data-testid="share-btn"><span class="en">share</span><span class="slash" aria-hidden="true">/</span><span class="fa" lang="fa" dir="rtl">هم‌رسانی</span></button>
+    <button type="button" id="index-btn" data-testid="index-btn" aria-label="Poem index · فهرستِ شعر"><span class="en">index</span><span class="slash" aria-hidden="true">/</span><span class="fa" lang="fa" dir="rtl">فهرست</span></button>
+    <button type="button" id="record-btn" data-testid="record-btn" hidden><span class="en">record 10s</span><span class="slash" aria-hidden="true">/</span><span class="fa" lang="fa" dir="rtl">ضبط ۱۰ ثانیه</span></button>
+    <button type="button" id="tilt-btn" data-testid="tilt-btn" aria-pressed="false" aria-label="Enable tilt · فعال‌کردنِ گردشِ گوشی" hidden><span class="en">tilt</span><span class="slash" aria-hidden="true">/</span><span class="fa" lang="fa" dir="rtl">گردش</span></button>
+    <button type="button" id="hide-ui" data-testid="hide-ui" aria-label="Hide interface · پنهان‌کردنِ رابط"><span class="en">hide</span><span class="slash" aria-hidden="true">/</span><span class="fa" lang="fa" dir="rtl">پنهان</span></button>
+  </nav>
+
+  <footer id="hint" data-testid="hint" data-lang="both" role="contentinfo">
+    <span class="hint-en">drag to orbit · tap a glowing node to travel · <kbd>H</kbd> hides the interface</span>
+    <span class="hint-fa" lang="fa" dir="rtl">بکشید تا بگردید · به گرهی درخشان بزنید تا سفر کنید · <kbd>H</kbd> رابط را پنهان می‌کند</span>
+  </p>
+</div>
+
+<section id="fallback-list" class="fallback-list" data-testid="fallback-list" aria-label="Poem lines · خطوطِ شعر">
+  <div class="fallback-head">
+    <h2 lang="en">Poem index</h2>
+    <h2 lang="fa" dir="rtl">فهرستِ شعر</h2>
+    <button type="button" id="index-close" aria-label="Close poem index · بستنِ فهرست">×</button>
+  </div>
+  <p class="fallback-note" lang="en">Every line, in both languages. Choose one with <kbd>Enter</kbd> to travel to its node.</p>
+  <p class="fallback-note" lang="fa" dir="rtl">همه‌ی خطوط، به هر دو زبان. با <kbd>Enter</kbd> به گرهِ آن خط سفر کنید.</p>
+  <ol id="poem-index"></ol>
+</section>
+
+<div id="fallback-message" role="alert" hidden>
+  <h2>WebGL could not start · WebGL آغاز نشد</h2>
+  <p lang="en">This browser could not create a WebGL context. The complete poem is available below, in English and Persian.</p>
+  <p lang="fa" dir="rtl">این مرورگر نتوانست بافتِ WebGL بسازد. تمامِ شعر، به انگلیسی و فارسی، در پایین در دسترس است.</p>
+  <button type="button" id="fallback-open">Read the poem · خواندنِ شعر</button>
+</div>
+
+<div id="live-region" class="sr-only" aria-live="polite"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <p style="padding:2rem;color:#d9e9e2;background:#03080a">This piece needs JavaScript and WebGL. / این اثر به جاوااسکریپت و WebGL نیاز دارد.</p>
+</noscript>
+
+<script type="module">
+/*__APP__*/
+</script>
+</body>
+</html>

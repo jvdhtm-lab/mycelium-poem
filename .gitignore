@@ -1,0 +1,26 @@
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+.server.pid
+
+# local probe and patch scratch files
+.probe*.cjs
+.edit.cjs
+.checktext.cjs
+.nonascii.cjs
+.sharegolden.cjs
+probe*.png
+
+# one-off maintenance scripts used while building the piece
+scripts/restore-text.mjs
+scripts/patch-lite.mjs
+
+full-test.log
+full-test.err
+.fulltest.pid

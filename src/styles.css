@@ -493,6 +493,92 @@ body.frozen #hint { transition: none !important; }
 
 body.low-text .poem-line { text-shadow: none !important; }
 
+/* ---------- add a line ---------- */
+
+#add-dialog {
+  width: min(560px, calc(100vw - 28px));
+  max-height: min(86vh, 760px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid rgba(150, 220, 199, 0.24);
+  border-radius: 4px;
+  background: rgba(4, 13, 15, 0.97);
+  color: var(--ink);
+  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.72);
+  overflow: auto;
+}
+#add-dialog::backdrop {
+  background: rgba(1, 5, 6, 0.72);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+#add-form { padding: 22px clamp(18px, 4vw, 30px) 24px; }
+.add-head { display: flex; align-items: baseline; gap: 12px; border-bottom: 1px solid rgba(150, 220, 199, 0.12); padding-bottom: 12px; }
+.add-head h2 { margin: 0; font-weight: 300; font-size: 20px; letter-spacing: 0.04em; color: #e4f2e8; }
+.add-head h2 span { font-family: var(--sans-fa); font-size: 18px; letter-spacing: normal !important; color: var(--ink-soft); }
+#add-cancel { margin-inline-start: auto; background: none; border: 0; color: var(--ink-soft); font-size: 24px; line-height: 1; cursor: pointer; padding: 2px 6px; }
+#add-cancel:focus-visible, #add-dialog button:focus-visible, #add-dialog textarea:focus-visible, #add-dialog select:focus-visible {
+  outline: 1px solid var(--amber);
+  outline-offset: 2px;
+}
+.add-note { margin: 12px 0 4px; color: var(--ink-soft); font-size: 12.5px; line-height: 1.6; letter-spacing: 0.02em; }
+.add-note-fa { font-family: var(--sans-fa); font-size: 13px; line-height: 1.95; letter-spacing: normal !important; direction: rtl; text-align: right; color: var(--ink-faint); }
+#add-dialog label { display: block; margin: 16px 0 6px; color: var(--ink-soft); font-family: var(--serif-en); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+#add-dialog label.label-fa { font-family: var(--sans-fa); font-size: 13px; letter-spacing: normal !important; text-transform: none; direction: rtl; text-align: right; }
+#add-dialog label span[lang="fa"] { font-family: var(--sans-fa); font-size: 12px; letter-spacing: normal !important; text-transform: none; }
+#add-en, #add-fa, #add-theme {
+  width: 100%;
+  border: 1px solid rgba(150, 220, 199, 0.18);
+  border-radius: 3px;
+  background: rgba(9, 25, 27, 0.7);
+  color: var(--ink);
+  padding: 10px 11px;
+  font-family: var(--serif-en);
+  font-size: 15px;
+  line-height: 1.5;
+  resize: vertical;
+}
+#add-fa {
+  font-family: var(--sans-fa);
+  font-size: 15px;
+  line-height: 2;
+  letter-spacing: normal !important;
+  direction: rtl;
+  text-align: right;
+}
+#add-theme { appearance: none; font-family: var(--sans-fa); letter-spacing: normal !important; }
+#add-dialog textarea::placeholder { color: rgba(169, 189, 180, 0.45); }
+.add-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+#add-status { margin-inline-end: auto; min-height: 1.4em; color: var(--amber); font-family: var(--sans-fa); font-size: 12px; letter-spacing: normal !important; line-height: 1.6; }
+#add-status.error { color: #f2a68f; }
+#add-dismiss, #add-submit {
+  border: 1px solid var(--panel-line);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 3px;
+  padding: 9px 13px;
+  cursor: pointer;
+  font-family: var(--serif-en);
+  font-size: 13px;
+}
+#add-submit { border-color: rgba(240, 200, 142, 0.4); color: #f6e3be; }
+#add-submit span { font-family: var(--sans-fa); letter-spacing: normal !important; }
+#add-submit:disabled { opacity: 0.45; cursor: wait; }
+#add-btn[hidden] { display: none !important; }
+
+body.ui-hidden #add-dialog { display: none !important; }
+
+@media (max-width: 640px) {
+  #add-dialog { max-height: 82vh; }
+  #add-form { padding: 18px 16px 20px; }
+  .add-head h2 { font-size: 17px; }
+  .add-head h2 span { font-size: 15px; }
+  #add-en, #add-fa { font-size: 14px; }
+  .add-actions { justify-content: stretch; }
+  #add-status { width: 100%; }
+  #add-dismiss, #add-submit { flex: 1; }
+}
+
 @media (max-width: 640px) {
   #brand { max-width: 40vw; }
   #brand h1 { font-size: 10px; letter-spacing: 0.2em; }

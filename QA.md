@@ -29,6 +29,15 @@ The automated suite is the first gate. This document records the checks that can
 - [ ] Pinch to zoom and drag to orbit on both phones; confirm the camera stays inside the distance limits.
 - [ ] Sound is silent on first load. Tap sound once: a quiet drone and soft chimes on pulse arrivals. Tap again: silence. Switch tabs for 30 seconds and return: audio resumes only if it was on, and never starts on its own. Check headphones and the phone's silent switch.
 
+### Shared additions
+
+- [ ] Open the add composer on phone and desktop. Add a line in both languages, choose a theme, and submit. Confirm the dialog is usable in Persian/English, the line grows in with new threads, the camera travels to it, and the line is readable.
+- [ ] Open the same URL on a second device. Confirm the new node appears within eight seconds without a reload, and after a refresh the line is still there.
+- [ ] Submit an empty line, a Latin-only Persian line, a duplicate, and six lines in quick succession. Confirm clear errors, deduplication, and rate limiting.
+- [ ] Remove a line with `DELETE /api/lines/:id` and `ADMIN_TOKEN`; confirm it disappears after refresh.
+- [ ] Confirm the add button is hidden on a static-only deployment (no `/api`), and that a network outage during submission shows a calm bilingual error.
+- [ ] Review user-generated text before leaving a public instance unattended. There is no automated moderation.
+
 ### Reading, share and recording
 
 - [ ] Open the poem index by button and by keyboard. Tab through it; the panel appears on focus. Enter flies to the line.
@@ -58,7 +67,10 @@ The automated suite is the first gate. This document records the checks that can
 10. **External dependencies.** The page needs the pinned cdnjs Three.js module and Google Fonts at first load. The fallback list covers WebGL failure, not a total CDN failure. Static checks fail if an unpinned or unexpected URL is introduced.
 11. **Visual snapshots can be refreshed on one OS only.** The committed baselines use `win32`. A Linux/macOS developer should run the update command before comparing.
 12. **No localStorage.** Language/state persistence is intentionally per session. Reloading returns to the default bilingual view.
-13. **`prefers-reduced-motion` disables camera drift/orbit and shortens the intro**, but subtle particle twinkle remains because it is decorative and does not move the viewer.
+13. **Shared lines are stored in a single JSON file.** Run one backend replica with a persistent volume. For horizontal scaling, replace the store with a shared database. No accounts, CAPTCHA or automated moderation are attached; use `ADMIN_TOKEN` deletion and monitor a public instance.
+14. **New shared lines appear through an eight-second poll, not a WebSocket.** This keeps the static-friendly backend tiny and robust; the live growth animation runs when the poll (or a direct submission) delivers the line.
+15. **The static GitHub Pages build has no backend.** The repository ships the backend, but a static host cannot accept submissions; the composer is hidden when the page is not served with `__MYCELIUM_HAS_API__ = true`. Deploy the Docker image (or another Node host with a volume) for the live network.
+16. **`prefers-reduced-motion` disables camera drift/orbit and shortens the intro**, but subtle particle twinkle remains because it is decorative and does not move the viewer.
 
 ## 3. Automation vs manual
 
@@ -83,6 +95,7 @@ The automated suite is the first gate. This document records the checks that can
 | 30 fps software median, 20 s memory stability | Chromium | Real-GPU 60 fps |
 | Quality tiers, DPR cap, file size | Chromium / all projects | Device-specific thermal behaviour |
 | Visual snapshots for idle/locked/3 depths/fly-to | Local all five projects; skipped in CI | Real-device screenshot review |
+| Visitor adds a line, live growth, shared persistence | Chromium isolated backend (submit, geometry, second page, validation) | Real-device moderation, long-term abuse, rate-limit operations |
 | Gyroscope/tilt | — (not automatable) | iOS and Android |
 
 ## 4. Reproduce the automated results
@@ -94,7 +107,7 @@ npx playwright install --with-deps chromium firefox webkit
 npx playwright test
 ```
 
-Local result at the time of writing: **162 passed, 28 skipped, 0 failed** across `chromium`, `firefox`, `webkit`, `iphone-13`, and `pixel-7`. The local skips are intentional: touch on the three desktop projects, the WebGL-disable test outside Chromium, performance/memory on non-Chromium projects, headless-WebKit audio, the cross-engine comparison outside Chromium projects, and pixel comparisons in CI. GitHub CI runs Chromium, WebKit, iPhone 13 and Pixel 7; the Firefox project is local-only because GitHub's headless Linux Firefox cannot create a WebGL context. Update the baselines with:
+Local result at the time of writing: **163 passed, 32 skipped, 0 failed** across `chromium`, `firefox`, `webkit`, `iphone-13`, and `pixel-7`. The local skips are intentional: touch on the three desktop projects, the WebGL-disable test outside Chromium, performance/memory on non-Chromium projects, headless-WebKit audio, the cross-engine comparison outside Chromium projects, and pixel comparisons in CI. GitHub CI runs Chromium, WebKit, iPhone 13 and Pixel 7; the Firefox project is local-only because GitHub's headless Linux Firefox cannot create a WebGL context. Update the baselines with:
 
 ```bash
 npm run test:update-snapshots

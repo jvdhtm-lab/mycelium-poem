@@ -35,7 +35,7 @@ export default defineConfig({
   outputDir: "test-results",
   snapshotPathTemplate: "{testDir}/__screenshots__/{projectName}/{arg}-{platform}{ext}",
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: "http://127.0.0.1:4181",
     colorScheme: "dark",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
@@ -45,9 +45,14 @@ export default defineConfig({
   },
   webServer: {
     command: "node scripts/serve.mjs",
-    url: "http://127.0.0.1:4173/",
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000
+    url: "http://127.0.0.1:4181/",
+    reuseExistingServer: false,
+    timeout: 30_000,
+    env: {
+      PORT: "4181",
+      MYCELIUM_TEST: "1",
+      MYCELIUM_DATA_FILE: "test-results/additions-test.json"
+    }
   },
   projects: [
     {

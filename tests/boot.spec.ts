@@ -89,7 +89,7 @@ test.describe("boot", () => {
       const browser = await type.launch({ headless: true });
       try {
         const context = await browser.newContext({
-          baseURL: "http://127.0.0.1:4173",
+          baseURL: "http://127.0.0.1:4181",
           viewport,
           deviceScaleFactor: 1
         });
@@ -138,7 +138,7 @@ test.describe("boot", () => {
       if (message.type() === "error") errors.push(message.text());
     });
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.goto("http://127.0.0.1:4173/?test=1&seed=42");
+    await page.goto("http://127.0.0.1:4181/?test=1&seed=42");
     await page.waitForFunction(() => (window as any).__MYCELIUM__?.readyDone === true, undefined, { timeout: 20_000 });
     await expect(page.locator("body")).toHaveClass(/webgl-failed/);
     const list = page.locator('[data-testid="fallback-list"]');

@@ -6,8 +6,7 @@ type Audit = {
 };
 
 const ALLOWED: RegExp[] = [
-  /^http:\/\/127\.0\.0\.1:4173\/(?:\?.*)?$/,
-  /^http:\/\/127\.0\.0\.1:4173\/index\.html(?:\?.*)?$/,
+  /^http:\/\/127\.0\.0\.1:4181\//,
   /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/0\.160\.0\/three\.module\.min\.js$/,
   /^https:\/\/fonts\.googleapis\.com\/css2\?/,
   /^https:\/\/fonts\.gstatic\.com\//,

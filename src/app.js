@@ -119,8 +119,23 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
     ]
   };
 
+  const HAS_API = window.__MYCELIUM_HAS_API__ === true;
+  const injectedAdditions = Array.isArray(window.__MYCELIUM_ADDITIONS__) ? window.__MYCELIUM_ADDITIONS__ : [];
+  const sourceNodes = POEM.nodes.map((line) => ({ ...line }));
+  const sourceIds = new Set(sourceNodes.map((line) => line.id));
+  for (const raw of injectedAdditions.slice(0, 300)) {
+    if (!raw || typeof raw.id !== "string" || !/^[A-Za-z0-9_-]{1,48}$/.test(raw.id)) continue;
+    if (sourceIds.has(raw.id)) continue;
+    const theme = Array.isArray(raw.themes) ? raw.themes.find((value) => THEMES[value]) : null;
+    const en = String(raw.en || "").trim().slice(0, 180);
+    const fa = String(raw.fa || "").trim().slice(0, 180);
+    if (!theme || en.length < 2 || fa.length < 2) continue;
+    sourceNodes.push({ id: raw.id, en, fa, themes: [theme], weight: 1, added: true });
+    sourceIds.add(raw.id);
+  }
+
   const nodeById = new Map();
-  const nodes = POEM.nodes.map((raw, index) => {
+  const nodes = sourceNodes.map((raw, index) => {
     if (nodeById.has(raw.id)) throw new Error("Duplicate node id: " + raw.id);
     const themes = Array.isArray(raw.themes) && raw.themes.length
       ? raw.themes.filter((t) => THEMES[t])
@@ -131,6 +146,7 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
       fa: raw.fa,
       themes,
       weight: clamp(Number(raw.weight) || 1, 1, 3),
+      added: !!raw.added,
       index,
       pos: new THREE.Vector3(),
       birth: 0,
@@ -555,6 +571,213 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
   nodeGeometry.setAttribute("aFlash", nodeFlashAttr);
   nodeGeometry.computeBoundingSphere();
 
+  function makeDynamicTubeGeometry() {
+    const positions = [];
+    const edgeValues = [];
+    const tValues = [];
+    const colors = [];
+    const births = [];
+    const glow = [];
+    const indices = [];
+    for (const edge of dynamicEdges) {
+      const curve = edge.curve;
+      const tubularSegments = clamp(Math.round(curve.getLength() * 2.1), 18, 48);
+      const radialSegments = 6;
+      const geometry = new THREE.TubeGeometry(curve, tubularSegments, edge.radius, radialSegments, false);
+      const pos = geometry.attributes.position;
+      const offset = positions.length / 3;
+      const ringCount = tubularSegments + 1;
+      const radialCount = radialSegments + 1;
+      const centers = [];
+      for (let r = 0; r < ringCount; r++) centers.push(curve.getPointAt(r / tubularSegments));
+      for (let v = 0; v < pos.count; v++) {
+        const ring = Math.floor(v / radialCount);
+        const t = Math.min(1, ring / tubularSegments);
+        const center = centers[ring];
+        const wobble = 1 + Math.sin(t * 11 + edge.index * 1.7) * 0.07;
+        const taper = lerp(edge.taperStart, edge.taperEnd, t) * wobble;
+        positions.push(
+          center.x + (pos.getX(v) - center.x) * taper,
+          center.y + (pos.getY(v) - center.y) * taper,
+          center.z + (pos.getZ(v) - center.z) * taper
+        );
+        tValues.push(t);
+        edgeValues.push(edge.index);
+        colors.push(edge.colorBase.r, edge.colorBase.g, edge.colorBase.b);
+        births.push(edge.birth);
+        glow.push(1);
+      }
+      const index = geometry.index.array;
+      for (let k = 0; k < index.length; k++) indices.push(index[k] + offset);
+      geometry.dispose();
+    }
+    const built = new THREE.BufferGeometry();
+    built.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    built.setAttribute("aEdge", new THREE.Float32BufferAttribute(edgeValues, 1));
+    built.setAttribute("aT", new THREE.Float32BufferAttribute(tValues, 1));
+    built.setAttribute("aColor", new THREE.Float32BufferAttribute(colors, 3));
+    built.setAttribute("aBirth", new THREE.Float32BufferAttribute(births, 1));
+    built.setAttribute("aGlow", new THREE.Float32BufferAttribute(glow, 1));
+    built.setIndex(indices);
+    built.computeBoundingSphere();
+    return built;
+  }
+
+  function makeDynamicNodeGeometry() {
+    const positions = [];
+    const colors = [];
+    const weights = [];
+    const phases = [];
+    const births = [];
+    const bright = [];
+    const flash = [];
+    for (const node of dynamicNodes) {
+      positions.push(node.pos.x, node.pos.y, node.pos.z);
+      colors.push(node.color.r, node.color.g, node.color.b);
+      weights.push(node.weight);
+      phases.push(node.phase);
+      births.push(node.birth);
+      bright.push(1);
+      flash.push(0);
+    }
+    const built = new THREE.BufferGeometry();
+    built.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    built.setAttribute("aColor", new THREE.Float32BufferAttribute(colors, 3));
+    built.setAttribute("aWeight", new THREE.Float32BufferAttribute(weights, 1));
+    built.setAttribute("aPhase", new THREE.Float32BufferAttribute(phases, 1));
+    built.setAttribute("aBirth", new THREE.Float32BufferAttribute(births, 1));
+    built.setAttribute("aBright", new THREE.Float32BufferAttribute(bright, 1));
+    built.setAttribute("aFlash", new THREE.Float32BufferAttribute(flash, 1));
+    built.computeBoundingSphere();
+    return built;
+  }
+
+  function rebuildDynamicGeometry() {
+    if (!scene || !scene.userData) return;
+    if (dynamicEdges.length) {
+      const geometry = makeDynamicTubeGeometry();
+      if (!dynamicTubeMesh) {
+        dynamicTubeMesh = new THREE.Mesh(geometry, scene.userData.tubeMaterial);
+        dynamicTubeMesh.name = "dynamic-threads";
+        dynamicTubeMesh.frustumCulled = false;
+        scene.add(dynamicTubeMesh);
+      } else {
+        dynamicTubeMesh.geometry.dispose();
+        dynamicTubeMesh.geometry = geometry;
+      }
+    }
+    if (dynamicNodes.length) {
+      const geometry = makeDynamicNodeGeometry();
+      if (!dynamicNodeMesh) {
+        dynamicNodeMesh = new THREE.Points(geometry, scene.userData.nodeMaterial);
+        dynamicNodeMesh.name = "dynamic-nodes";
+        dynamicNodeMesh.frustumCulled = false;
+        scene.add(dynamicNodeMesh);
+      } else {
+        dynamicNodeMesh.geometry.dispose();
+        dynamicNodeMesh.geometry = geometry;
+      }
+    }
+  }
+
+  function applyLiveLines(rawLines) {
+    if (!webglReady || !Array.isArray(rawLines) || !rawLines.length) return [];
+    const fresh = [];
+    for (const raw of rawLines) {
+      if (!raw || typeof raw.id !== "string" || !/^[A-Za-z0-9_-]{1,48}$/.test(raw.id)) continue;
+      if (nodeById.has(raw.id) || knownAddedIds.has(raw.id)) continue;
+      const theme = Array.isArray(raw.themes) ? raw.themes.find((value) => THEMES[value]) : null;
+      const en = String(raw.en || "").trim().slice(0, 180);
+      const fa = String(raw.fa || "").trim().slice(0, 180);
+      if (!theme || en.length < 2 || fa.length < 2) continue;
+      fresh.push({ id: raw.id, en, fa, theme });
+    }
+    if (!fresh.length) return [];
+
+    const birth = Math.max(1.03, growth + 0.04);
+    const added = [];
+    for (const raw of fresh) {
+      const sameTheme = nodes.filter((node) => node.themes.includes(raw.theme));
+      const center = new THREE.Vector3();
+      for (const node of sameTheme) center.add(node.pos);
+      if (sameTheme.length) center.multiplyScalar(1 / sameTheme.length);
+      const rand = mulberry32(hashSeed(raw.id));
+      const direction = new THREE.Vector3(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1);
+      if (direction.lengthSq() < 0.01) direction.set(0.3, 0.5, 0.7);
+      direction.normalize();
+      const position = center.clone().addScaledVector(direction, 4 + rand() * 4);
+      for (let attempt = 0; attempt < 4; attempt++) {
+        if (!nodes.some((node) => node.pos.distanceTo(position) < 2.2)) break;
+        position.addScaledVector(direction, 2.4);
+      }
+      const node = {
+        id: raw.id,
+        en: raw.en,
+        fa: raw.fa,
+        themes: [raw.theme],
+        weight: 1,
+        added: true,
+        index: nodes.length,
+        pos: position,
+        birth: birth + 0.22,
+        phase: rand() * Math.PI * 2,
+        color: new THREE.Color(THEMES[raw.theme].color)
+      };
+      nodes.push(node);
+      nodeById.set(node.id, node);
+      adjacency.set(node.id, []);
+      knownAddedIds.add(node.id);
+      dynamicNodes.push(node);
+
+      const friends = nodes
+        .filter((other) => other.id !== node.id)
+        .map((other) => ({
+          node: other,
+          score: other.pos.distanceTo(position) - (other.themes.includes(raw.theme) ? 4.5 : 0)
+        }))
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 3);
+      for (const friend of friends) {
+        const other = friend.node;
+        const key = node.id < other.id ? node.id + "|" + other.id : other.id + "|" + node.id;
+        if (pairSeen.has(key)) continue;
+        const color = new THREE.Color(THEMES[raw.theme].color).lerp(other.color, 0.42).multiplyScalar(0.9);
+        const edge = {
+          a: other.id,
+          b: node.id,
+          themes: [raw.theme],
+          weight: 1,
+          manual: false,
+          proximity: true,
+          birth,
+          origin: other.id,
+          index: edges.length,
+          curve: makeCurve(other.pos, position, 0.07),
+          colorBase: color,
+          radius: 0.055 + rand() * 0.02,
+          taperStart: 1.16,
+          taperEnd: 0.5
+        };
+        edges.push(edge);
+        pairSeen.set(key, edge);
+        dynamicEdges.push(edge);
+        adjacency.get(node.id).push({ id: other.id, edge, weight: 1 });
+        adjacency.get(other.id).push({ id: node.id, edge, weight: 1 });
+      }
+      adjacency.get(node.id).sort((a, b) => b.weight - a.weight || a.id.localeCompare(b.id));
+      createLineElement(node);
+      added.push(node);
+    }
+
+    for (const list of adjacency.values()) list.sort((a, b) => b.weight - a.weight || a.id.localeCompare(b.id));
+    applyLanguage(state.lang);
+    buildFallbackList();
+    rebuildDynamicGeometry();
+    growthAnim = { from: growth, to: birth + 0.42, start: performance.now(), duration: 2600 };
+    forceTextUpdate = true;
+    return added;
+  }
+
   const canvas = document.getElementById("gl");
   const lineLayer = document.getElementById("line-layer");
   const fallbackList = document.getElementById("fallback-list");
@@ -570,7 +793,18 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
   const indexClose = document.getElementById("index-close");
   const recordBtn = document.getElementById("record-btn");
   const tiltBtn = document.getElementById("tilt-btn");
+  const addBtn = document.getElementById("add-btn");
+  const addDialog = document.getElementById("add-dialog");
+  const addForm = document.getElementById("add-form");
+  const addEn = document.getElementById("add-en");
+  const addFa = document.getElementById("add-fa");
+  const addTheme = document.getElementById("add-theme");
+  const addSubmit = document.getElementById("add-submit");
+  const addStatus = document.getElementById("add-status");
+  const addCancel = document.getElementById("add-cancel");
+  const addDismiss = document.getElementById("add-dismiss");
   const langButtons = Array.from(document.querySelectorAll("#lang-toggle button"));
+  addBtn.hidden = !HAS_API;
 
   const state = {
     lang: "both",
@@ -586,19 +820,30 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
     tiltOn: false,
     uiHidden: false,
     introDuration: IS_TEST ? CONFIG.intro.testDuration : reducedMotion ? CONFIG.intro.reducedDuration : CONFIG.intro.duration,
+    addedCount: nodes.filter((node) => node.added).length,
+    apiAvailable: HAS_API,
     readyDone: false
   };
 
   const lineElements = new Map();
   const lineSizes = new Map();
   const lineStyleCache = new Map();
+  const knownAddedIds = new Set(nodes.filter((node) => node.added).map((node) => node.id));
+  const dynamicEdges = [];
+  const dynamicNodes = [];
+  let dynamicTubeMesh = null;
+  let dynamicNodeMesh = null;
+  let growthAnim = null;
+  let syncTimer = 0;
+  let syncBusy = false;
+  let syncStarted = false;
 
-  nodes.forEach((node) => {
+  function createLineElement(node, lang = "both") {
     const el = document.createElement("div");
-    el.className = "poem-line lang-both";
+    el.className = "poem-line lang-" + lang;
     el.dataset.nodeId = node.id;
-    el.lang = "fa";
-    el.dir = "rtl";
+    el.lang = lang === "en" ? "en" : "fa";
+    el.dir = lang === "en" ? "ltr" : "rtl";
     el.style.opacity = "0";
     el.style.visibility = "hidden";
     el.style.transform = "translate(-50%, -50%)";
@@ -616,7 +861,10 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
     el.appendChild(fa);
     lineLayer.appendChild(el);
     lineElements.set(node.id, el);
-  });
+    return el;
+  }
+
+  nodes.forEach((node) => createLineElement(node));
 
   function buildFallbackList() {
     poemIndex.textContent = "";
@@ -696,6 +944,107 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
     showToast.timer = setTimeout(() => toastEl.classList.remove("show"), 2800);
   }
 
+  function setAddStatus(message, error = false) {
+    addStatus.textContent = message;
+    addStatus.classList.toggle("error", error);
+  }
+
+  function openAddDialog() {
+    if (!HAS_API) return;
+    setAddStatus("");
+    addForm.reset();
+    if (typeof addDialog.showModal === "function") {
+      if (!addDialog.open) addDialog.showModal();
+    } else {
+      addDialog.setAttribute("open", "");
+    }
+    addEn.focus();
+  }
+
+  function closeAddDialog() {
+    if (typeof addDialog.close === "function" && addDialog.open) addDialog.close();
+    else addDialog.removeAttribute("open");
+    addBtn.focus();
+  }
+
+  function validateAddLine(en, fa) {
+    if (en.length < 2 || fa.length < 2) return "Both lines are needed · هر دو خط لازم است";
+    if (Array.from(en).length > 180 || Array.from(fa).length > 180) return "Keep each line under 180 characters · کوتاه‌تر بنویسید";
+    if (!/[\u0600-\u06FF]/.test(fa)) return "The Persian line needs Persian letters · خطِ فارسی به حروف فارسی نیاز دارد";
+    return "";
+  }
+
+  async function submitAddLine(event) {
+    event.preventDefault();
+    if (!HAS_API) {
+      setAddStatus("The shared network is offline · شبکه‌ی مشترک در دسترس نیست", true);
+      return;
+    }
+    const en = addEn.value.trim().replace(/\s+/g, " ");
+    const fa = addFa.value.trim().replace(/\s+/g, " ");
+    const problem = validateAddLine(en, fa);
+    if (problem) {
+      setAddStatus(problem, true);
+      (en.length < 2 ? addEn : fa.length < 2 ? addFa : addFa).focus();
+      return;
+    }
+    addSubmit.disabled = true;
+    setAddStatus("Growing… · در حال روییدن…");
+    try {
+      const response = await fetch("/api/lines", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ en, fa, themes: [addTheme.value] })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.line) {
+        setAddStatus((data.error || "The network could not accept that line") + " · دوباره تلاش کنید", true);
+        return;
+      }
+      const alreadyKnown = knownAddedIds.has(data.line.id);
+      const added = applyLiveLines([data.line]);
+      if (!alreadyKnown && !added.length) {
+        setAddStatus("The line reached the network but could not be drawn · خط رسید اما کشیده نشد", true);
+        return;
+      }
+      closeAddDialog();
+      addForm.reset();
+      showToast("A line has grown · خطی رویید");
+      const id = added[0]?.id || data.line.id;
+      if (nodeById.has(id)) flyToNode(id, { lock: true });
+    } catch (_) {
+      setAddStatus("Could not reach the shared network · شبکه پاسخ نداد", true);
+    } finally {
+      addSubmit.disabled = false;
+    }
+  }
+
+  async function syncSharedLines() {
+    if (!HAS_API || syncBusy || !webglReady || document.hidden) return;
+    syncBusy = true;
+    try {
+      const response = await fetch("/api/lines", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      const incoming = (Array.isArray(data.lines) ? data.lines : []).filter((line) => line && !knownAddedIds.has(line.id));
+      if (!incoming.length) return;
+      const added = applyLiveLines(incoming);
+      if (added.length) showToast("New lines have grown · خطوط تازه روییدند");
+    } catch (_) {
+      // The network may be temporarily unreachable; keep the piece quiet.
+    } finally {
+      syncBusy = false;
+    }
+  }
+
+  function startLiveSync() {
+    if (!HAS_API || syncTimer) return;
+    setTimeout(syncSharedLines, 1200);
+    syncTimer = setInterval(() => {
+      if (!document.hidden) syncSharedLines();
+    }, 8000);
+  }
+
   let audioCtx = null;
   let masterGain = null;
   let droneNodes = [];
@@ -708,6 +1057,10 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
     if (readyDone) return;
     readyDone = true;
     state.readyDone = true;
+    if (!syncStarted && webglReady && HAS_API) {
+      syncStarted = true;
+      startLiveSync();
+    }
     try { readyResolve(); } catch (_) {}
   }
 
@@ -847,6 +1200,11 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
           uiHidden: state.uiHidden,
           tiltOn: state.tiltOn,
           introDuration: state.introDuration,
+          addedCount: nodes.filter((node) => node.added).length,
+          growth,
+          dynamicNodes: dynamicNodes.length,
+          dynamicEdges: dynamicEdges.length,
+          apiAvailable: HAS_API,
           limits: { minRadius: CONFIG.camera.minRadius, maxRadius: CONFIG.camera.maxRadius }
         };
       },
@@ -871,7 +1229,7 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
       },
       flyTo: (id) => flyToNode(id, { lock: true }),
       get lines() {
-        return nodes.map((n) => ({ id: n.id, en: n.en, fa: n.fa, themes: n.themes.slice(), weight: n.weight }));
+        return nodes.map((n) => ({ id: n.id, en: n.en, fa: n.fa, themes: n.themes.slice(), weight: n.weight, added: !!n.added }));
       },
       get worldNodes() {
         return nodes.map((n) => ({ id: n.id, x: round3(n.pos.x), y: round3(n.pos.y), z: round3(n.pos.z) }));
@@ -1571,6 +1929,7 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
   function toggleUI(force) {
     const next = typeof force === "boolean" ? force : !state.uiHidden;
     state.uiHidden = next;
+    if (next && addDialog.open) addDialog.close();
     document.body.classList.toggle("ui-hidden", next);
     if (next && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     showToast(next ? "Interface hidden · رابط پنهان شد" : "Interface visible · رابط آشکار شد");
@@ -1728,8 +2087,10 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
         setLineStyle(node.id, el, "opacity", "0");
         continue;
       }
-      if (isPrimary) opacity *= smooth(0.2, 1, growth);
-      else opacity *= smooth(0.55, 1, growth);
+      const reveal = node.birth > 1
+        ? smooth(node.birth - 0.07, node.birth + 0.14, growth)
+        : isPrimary ? smooth(0.2, 1, growth) : smooth(0.55, 1, growth);
+      opacity *= reveal;
       if (opacity < 0.01) {
         setLineStyle(node.id, el, "visibility", "hidden");
         setLineStyle(node.id, el, "opacity", "0");
@@ -1898,7 +2259,7 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
           }
           float travel = 0.11 + 0.09 * sin(aT * 13.0 - uTime * 0.52 + aEdge * 2.1);
           float depthLight = mix(1.28, 0.42, smoothstep(5.0, 56.0, camDepth));
-          float reveal = smoothstep(aBirth - 0.01, aBirth + 0.055, uGrowth);
+          float reveal = smoothstep(aBirth - 0.01, aBirth + 0.055, uGrowth - aT * 0.28);
           vColor = aColor * (0.5 + travel + pool * 1.1 + burst * 1.6) * aGlow * depthLight * uExposure;
           vBurst = burst;
           vAlpha = reveal;
@@ -2503,6 +2864,14 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
         introDone = true;
         if (fontsResolved && webglReady) resolveReady();
       }
+    } else if (!frozen && growthAnim) {
+      const t = Math.min(1, (performance.now() - growthAnim.start) / growthAnim.duration);
+      const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      growth = growthAnim.from + (growthAnim.to - growthAnim.from) * eased;
+      if (t >= 1) {
+        growth = growthAnim.to;
+        growthAnim = null;
+      }
     }
     updatePulses(rawDt);
     updateFocusVisuals(Math.min(rawDt, 0.1));
@@ -2843,6 +3212,13 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/
     });
   });
   soundBtn.addEventListener("click", toggleSound);
+  addBtn.addEventListener("click", openAddDialog);
+  addCancel.addEventListener("click", closeAddDialog);
+  addDismiss.addEventListener("click", closeAddDialog);
+  addForm.addEventListener("submit", submitAddLine);
+  addDialog.addEventListener("click", (event) => {
+    if (event.target === addDialog) closeAddDialog();
+  });
   shareBtn.addEventListener("click", downloadShare);
   hideBtn.addEventListener("click", () => toggleUI());
   indexBtn.addEventListener("click", () => {

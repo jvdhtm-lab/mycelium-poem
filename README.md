@@ -11,7 +11,37 @@ npm start
 # http://127.0.0.1:4173/
 ```
 
-`index.html` is committed and self-contained; opening it directly from disk also works. The only network requests are the pinned Three.js 0.160.0 module from cdnjs and the two Google Fonts.
+`index.html` is committed and self-contained. `npm start` now runs the shared API **and** serves the piece, so visitors can add lines to the network. The runtime requests are the pinned Three.js 0.160.0 module from cdnjs, Google Fonts, and the same-origin `/api` endpoints. Opening the static file directly still shows the poem; the add control stays hidden without a backend.
+
+## Grow the shared network
+
+Start the backend on any host with a persistent disk:
+
+```bash
+npm start          # http://127.0.0.1:4173
+# or
+npm run build
+docker build -t mycelium-poem .
+docker run -p 4173:4173 -v mycelium-data:/data mycelium-poem
+```
+
+The **add / افزودن** button opens a bilingual composer. A new line is saved through `POST /api/lines`, inserted into the shared graph, and grows in with new threads from its nearest neighbours; other open pages receive it on the next poll (eight seconds). Lines live in `data/additions.json` (or `MYCELIUM_DATA_FILE`).
+
+- `GET /api/lines` — all shared additions.
+- `GET /api/health` — count, capacity, version.
+- `POST /api/lines` — `{ en, fa, themes }`; validated, rate-limited and deduplicated.
+- `DELETE /api/lines/:id` — admin only, requires `ADMIN_TOKEN`.
+- Capacity defaults to 300 lines and five submissions per IP per ten minutes (`MAX_ADDITIONS`, `RATE_LIMIT`).
+
+For a temporary public link while your machine is running:
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:4173
+# or, when Cloudflare is not reachable:
+npx tunnelmole 4173
+```
+
+Use a permanent host with a mounted volume for a durable public network. The GitHub Pages/static build intentionally has no API; the composer hides itself there. See [QA.md](QA.md) for moderation and security notes.
 
 ## Edit the poem
 
@@ -72,12 +102,14 @@ Projects: `chromium`, `firefox`, `webkit` (1280×800) and mobile emulation `ipho
 
 ```
 index.html                 self-contained deliverable (generated)
-src/shell.html             markup and UI
+src/shell.html             markup, UI and additions marker
 src/styles.css             visual design
-src/app.js                 poem data, layout, shaders, navigation, tests hook
+src/app.js                 poem data, layout, shaders, navigation, shared growth, tests hook
 build.mjs                  inlines src/ into index.html
 tests/                     Playwright suites + baselines
-scripts/serve.mjs          tiny static server
+scripts/serve.mjs          static host + shared-lines API
+tests/add-line.spec.ts     isolated shared-backend growth test
+Dockerfile                 persistent backend deployment
 scripts/static-check.mjs   local constraint lint
 QA.md                      manual checklist, limitations, coverage matrix
 ```

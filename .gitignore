@@ -24,3 +24,10 @@ scripts/patch-lite.mjs
 full-test.log
 full-test.err
 .fulltest.pid
+
+data/
+
+.publicadd.cjs
+served.html
+tunnel*.log
+.tunnel*.pid

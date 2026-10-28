@@ -34,7 +34,7 @@ test.describe("performance", () => {
   test("pixel ratio is capped at two", async ({ browser }) => {
     test.skip(!isChromium(), "device scale factor launch is checked on chromium");
     const context = await browser.newContext({
-      baseURL: "http://127.0.0.1:4173",
+      baseURL: "http://127.0.0.1:4181",
       viewport: { width: 390, height: 844 },
       deviceScaleFactor: 3,
       isMobile: true,

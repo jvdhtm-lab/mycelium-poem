@@ -33,6 +33,7 @@
       <button type="button" data-testid="lang-fa" data-lang="fa" aria-pressed="false" lang="fa">فارسی</button>
       <button type="button" data-testid="lang-both" data-lang="both" aria-pressed="true" lang="en">both</button>
     </div>
+    <button type="button" id="add-btn" data-testid="add-btn" hidden><span class="en">add</span><span class="slash" aria-hidden="true">/</span><span class="fa" lang="fa" dir="rtl">افزودن</span></button>
     <button type="button" id="sound-btn" data-testid="sound-btn" aria-pressed="false"><span class="en" id="sound-en">sound off</span><span class="slash" aria-hidden="true">/</span><span class="fa" id="sound-fa" lang="fa" dir="rtl">صدا خاموش</span></button>
     <button type="button" id="share-btn" data-testid="share-btn"><span class="en">share</span><span class="slash" aria-hidden="true">/</span><span class="fa" lang="fa" dir="rtl">هم‌رسانی</span></button>
     <button type="button" id="index-btn" data-testid="index-btn" aria-label="Poem index · فهرستِ شعر"><span class="en">index</span><span class="slash" aria-hidden="true">/</span><span class="fa" lang="fa" dir="rtl">فهرست</span></button>
@@ -44,8 +45,41 @@
   <footer id="hint" data-testid="hint" data-lang="both" role="contentinfo">
     <span class="hint-en">drag to orbit · tap a glowing node to travel · <kbd>H</kbd> hides the interface</span>
     <span class="hint-fa" lang="fa" dir="rtl">بکشید تا بگردید · به گرهی درخشان بزنید تا سفر کنید · <kbd>H</kbd> رابط را پنهان می‌کند</span>
-  </p>
+  </footer>
 </div>
+
+<dialog id="add-dialog" data-testid="add-dialog" aria-labelledby="add-title" aria-describedby="add-note">
+  <form id="add-form" novalidate>
+    <div class="add-head">
+      <h2 id="add-title" lang="en">Add a line <span lang="fa" dir="rtl">· خطی بیفزایید</span></h2>
+      <button type="button" id="add-cancel" data-testid="add-cancel" aria-label="Close · بستن">×</button>
+    </div>
+    <p id="add-note" class="add-note" lang="en">Every line becomes a node in the shared network. Be gentle; the mycelium remembers.</p>
+    <p class="add-note add-note-fa" lang="fa" dir="rtl">هر خط گره‌ای در شبکه‌ی مشترک می‌شود. آهسته باش؛ میسلیوم به یاد می‌آورد.</p>
+
+    <label for="add-en" lang="en">English line</label>
+    <textarea id="add-en" data-testid="add-en" name="en" rows="2" maxlength="180" required lang="en" dir="ltr" autocomplete="off" spellcheck="true"></textarea>
+
+    <label for="add-fa" class="label-fa" lang="fa" dir="rtl">خطِ فارسی</label>
+    <textarea id="add-fa" data-testid="add-fa" name="fa" rows="2" maxlength="180" required lang="fa" dir="rtl" autocomplete="off" spellcheck="false"></textarea>
+
+    <label for="add-theme" lang="en">Theme <span lang="fa" dir="rtl">· درون‌مایه</span></label>
+    <select id="add-theme" data-testid="add-theme" name="theme">
+      <option value="roots">roots · ریشه‌ها</option>
+      <option value="light">light · نور</option>
+      <option value="decay">decay · پوسیدن</option>
+      <option value="memory">memory · حافظه</option>
+      <option value="silence">silence · سکوت</option>
+      <option value="return">return · بازگشت</option>
+    </select>
+
+    <div class="add-actions">
+      <span id="add-status" data-testid="add-status" role="status" aria-live="polite"></span>
+      <button type="button" id="add-dismiss">Cancel · انصراف</button>
+      <button type="submit" id="add-submit" data-testid="add-submit">Grow it <span lang="fa">· برویان</span></button>
+    </div>
+  </form>
+</dialog>
 
 <section id="fallback-list" class="fallback-list" data-testid="fallback-list" aria-label="Poem lines · خطوطِ شعر">
   <div class="fallback-head">
@@ -72,6 +106,10 @@
   <p style="padding:2rem;color:#d9e9e2;background:#03080a">This piece needs JavaScript and WebGL. / این اثر به جاوااسکریپت و WebGL نیاز دارد.</p>
 </noscript>
 
+<script>
+  window.__MYCELIUM_ADDITIONS__ = /*__ADDITIONS__*/[];
+  window.__MYCELIUM_HAS_API__ = /*__HAS_API__*/false;
+</script>
 <script type="module">
 /*__APP__*/
 </script>

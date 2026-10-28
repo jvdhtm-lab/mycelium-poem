@@ -72,7 +72,13 @@ const required = [
   'data-testid="tilt-btn"',
   'data-testid="hide-ui"',
   'data-testid="fallback-list"',
-  'data-testid="hint"'
+  'data-testid="hint"',
+  'data-testid="add-btn"',
+  'data-testid="add-dialog"',
+  'data-testid="add-en"',
+  'data-testid="add-fa"',
+  'data-testid="add-theme"',
+  'data-testid="add-submit"'
 ];
 for (const marker of required) check(html.includes(marker), "missing " + marker);
 check(html.includes('"line-primary"'), "line-primary test id is generated");
@@ -80,6 +86,8 @@ check(html.includes('"line-echo"'), "line-echo test id is generated");
 check(html.includes("REPLACE WITH REAL LINES"), "placeholder poem comment is present");
 check(html.includes("const CONFIG ="), "CONFIG object is present");
 check(html.includes("const POEM ="), "POEM object is present");
+check(html.includes("__MYCELIUM_ADDITIONS__"), "shared additions marker is present");
+check(html.includes("__MYCELIUM_HAS_API__"), "API marker is present");
 
 const cssMatch = html.match(/<style>([\s\S]*?)<\/style>/);
 check(Boolean(cssMatch), "inline stylesheet exists");

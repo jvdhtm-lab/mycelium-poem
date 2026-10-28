@@ -52,12 +52,13 @@ The automated suite is the first gate. This document records the checks that can
 4. **Pixel baselines are OS- and engine-specific.** Baselines are committed for Windows Chromium/Firefox/WebKit and the two mobile emulations. CI skips pixel comparisons (`process.env.CI`) because the Linux runner uses different text rasterisation and GPU raster paths. Run `npm run test:update-snapshots` on the target OS to refresh them.
 5. **iPhone emulation uses Chromium.** The `iphone-13` project reproduces a 390×844 viewport, touch, DPR and user agent in Chromium so visual/perf baselines stay reproducible; desktop WebKit covers the Safari engine. Real iPhone Safari remains a manual check (especially shaping, dynamic browser chrome and safe areas).
 6. **Pinch is tested with synthetic pointer events.** Real multi-touch hardware behaviour (pointer capture, palm rejection) is a manual check.
-7. **Gyroscope/tilt cannot be automated headlessly.** Permission prompts, sensor availability and iOS gestures are manual.
-8. **Real-GPU 60 fps is not asserted in CI.** CI only has software rendering. The 60 fps desktop/mid-range-phone target is a manual measurement.
-9. **External dependencies.** The page needs the pinned cdnjs Three.js module and Google Fonts at first load. The fallback list covers WebGL failure, not a total CDN failure. Static checks fail if an unpinned or unexpected URL is introduced.
-10. **Visual snapshots can be refreshed on one OS only.** The committed baselines use `win32`. A Linux/macOS developer should run the update command before comparing.
-11. **No localStorage.** Language/state persistence is intentionally per session. Reloading returns to the default bilingual view.
-12. **`prefers-reduced-motion` disables camera drift/orbit and shortens the intro**, but subtle particle twinkle remains because it is decorative and does not move the viewer.
+7. **Firefox has no WebGL on GitHub's headless Linux runner.** The same Firefox build creates a context on a Windows GPU host and passes the full local suite. CI therefore omits the Firefox project (with this written reason) while keeping WebKit and SwiftShader Chromium; the fallback list is also covered by the Chromium WebGL-disable test.
+8. **Gyroscope/tilt cannot be automated headlessly.** Permission prompts, sensor availability and iOS gestures are manual.
+9. **Real-GPU 60 fps is not asserted in CI.** CI only has software rendering. The 60 fps desktop/mid-range-phone target is a manual measurement.
+10. **External dependencies.** The page needs the pinned cdnjs Three.js module and Google Fonts at first load. The fallback list covers WebGL failure, not a total CDN failure. Static checks fail if an unpinned or unexpected URL is introduced.
+11. **Visual snapshots can be refreshed on one OS only.** The committed baselines use `win32`. A Linux/macOS developer should run the update command before comparing.
+12. **No localStorage.** Language/state persistence is intentionally per session. Reloading returns to the default bilingual view.
+13. **`prefers-reduced-motion` disables camera drift/orbit and shortens the intro**, but subtle particle twinkle remains because it is decorative and does not move the viewer.
 
 ## 3. Automation vs manual
 
@@ -93,7 +94,7 @@ npx playwright install --with-deps chromium firefox webkit
 npx playwright test
 ```
 
-Local result at the time of writing: **162 passed, 28 skipped, 0 failed** across `chromium`, `firefox`, `webkit`, `iphone-13`, and `pixel-7`. The skips are intentional: touch on the three desktop projects, the WebGL-disable test outside Chromium, performance/memory on non-Chromium projects, headless-WebKit audio, the cross-engine comparison outside Chromium projects, and pixel comparisons in CI. Update the baselines with:
+Local result at the time of writing: **162 passed, 28 skipped, 0 failed** across `chromium`, `firefox`, `webkit`, `iphone-13`, and `pixel-7`. The local skips are intentional: touch on the three desktop projects, the WebGL-disable test outside Chromium, performance/memory on non-Chromium projects, headless-WebKit audio, the cross-engine comparison outside Chromium projects, and pixel comparisons in CI. GitHub CI runs Chromium, WebKit, iPhone 13 and Pixel 7; the Firefox project is local-only because GitHub's headless Linux Firefox cannot create a WebGL context. Update the baselines with:
 
 ```bash
 npm run test:update-snapshots

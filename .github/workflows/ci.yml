@@ -25,7 +25,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, webkit, iphone-13, pixel-7]
+        # Firefox is omitted from GitHub CI: its headless Linux build exposes no
+        # WebGL context even with software prefs. Firefox runs locally and in
+        # the manual checklist; WebKit and SwiftShader Chromium cover CI.
+        project: [chromium, webkit, iphone-13, pixel-7]
     env:
       CI: "true"
     steps:

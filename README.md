@@ -66,7 +66,7 @@ npm run lint                        # static constraints
 npm run check                       # lint + full suite
 ```
 
-Projects: `chromium`, `firefox`, `webkit` (1280×800) and mobile emulation `iphone-13` (390×844) and `pixel-7` (412×915), both touch/high-DPR. Visual snapshots are baseline-compared locally and intentionally skipped in CI; see [QA.md](QA.md).
+Projects: `chromium`, `firefox`, `webkit` (1280×800) and mobile emulation `iphone-13` (390×844) and `pixel-7` (412×915), both touch/high-DPR. GitHub CI runs Chromium, WebKit, iPhone 13 and Pixel 7; Firefox is local-only because the GitHub Linux headless Firefox build has no WebGL context. Visual snapshots are baseline-compared locally and intentionally skipped in CI; see [QA.md](QA.md).
 
 ## Structure
 
